@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Il Diario della Combriccola</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+
+<!-- ================================================================
+     CONFIGURAZIONE — modifica questi 3 valori prima di pubblicare
+     ================================================================ -->
+<script>
+  // 1) Incolla qui la configurazione del TUO progetto Firebase
+  //    (la trovi in Firebase Console > Impostazioni progetto > Le tue app)
+  window.FIREBASE_CONFIG = {
+  	apiKey: "AIzaSyAFmr5VgPpa8hzx-oHMATPHMUcw5UFgsic",
+  	authDomain: "lupimacheratidatwink.firebaseapp.com",
+  	projectId: "lupimacheratidatwink",
+  	storageBucket: "lupimacheratidatwink.firebasestorage.app",
+  	messagingSenderId: "1059721066277",
+  	appId: "1:1059721066277:web:bf2d13159e217577f24ccc"
+  };
+
+  // 2) Un nome per il vostro gruppo (se un giorno riusi questo sito per
+  //    un altro gruppo di amici, basta cambiare questa stringa)
+  window.GROUP_ID = "combriccola-principale";
+
+  // 3) La password che userete tu/gli admin per sbloccare i pannelli
+  //    di amministrazione (creare sondaggi, questionari, eventi, ruota)
+  window.ADMIN_PASSWORD = "Jaco.1124";
+</script>
+
+<style>
+  :root{
+    --bg:#142229;
+    --bg-alt:#1b323d;
+    --surface:#20404c;
+    --card:#faf3e3;
+    --ink:#221f19;
+    --ink-soft:#5b5346;
+    --amber:#e6a53c;
+    --amber-ink:#4a2f0a;
+    --coral:#d97355;
+    --sage:#7fa08a;
+    --muted:#a9c2bd;
+    --line:rgba(250,243,227,0.14);
+    --radius:14px;
+    --shadow: 0 10px 24px rgba(6,14,17,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--card);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  h1,h2,h3,.brand{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  button{font-family:inherit;}
+  a{color:inherit;}
+
+  /* ---------- Overlay: scelta nome ---------- */
+  #nameModal{
+    position:fixed;inset:0;background:linear-gradient(180deg,var(--bg),var(--bg-alt));
+    display:flex;align-items:center;justify-content:center;z-index:50;padding:24px;
+  }
+  #nameModal .box{
+    background:var(--card);color:var(--ink);border-radius:var(--radius);
+    padding:28px 24px;max-width:360px;width:100%;box-shadow:var(--shadow);
+    border:1px dashed rgba(34,31,25,0.25);
+  }
+  #nameModal h1{font-size:1.6rem;margin:0 0 6px;}
+  #nameModal p{color:var(--ink-soft);font-size:0.92rem;line-height:1.4;margin:0 0 18px;}
+  #nameModal input{
+    width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid rgba(34,31,25,0.2);
+    font-size:1rem;margin-bottom:12px;font-family:inherit;background:#fff;color:var(--ink);
+  }
+  #nameModal button{
+    width:100%;padding:12px;border-radius:10px;border:none;background:var(--amber);
+    color:var(--amber-ink);font-weight:700;font-size:1rem;cursor:pointer;
+  }
+
+  /* ---------- Layout app ---------- */
+  #app{display:none;min-height:100%;flex-direction:column;}
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 18px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:var(--bg);z-index:10;
+    padding-top:calc(14px + env(safe-area-inset-top,0px));
+  }
+  header.top .brand{font-size:1.15rem;color:var(--card);display:flex;align-items:center;gap:8px;}
+  header.top .who{display:flex;align-items:center;gap:10px;font-size:0.85rem;color:var(--muted);}
+  header.top .streak-badge{
+    display:flex;align-items:center;gap:4px;background:var(--surface);
+    padding:4px 10px;border-radius:999px;font-weight:600;color:var(--card);font-size:0.85rem;
+  }
+  header.top button.admin-btn{
+    background:none;border:1px solid var(--line);color:var(--muted);
+    padding:5px 10px;border-radius:8px;font-size:0.75rem;cursor:pointer;
+  }
+  body.is-admin header.top button.admin-btn{background:var(--coral);color:#fff;border-color:var(--coral);}
+
+  main{flex:1;padding:18px 16px 100px;max-width:640px;margin:0 auto;width:100%;}
+  section.page{display:none;}
+  section.page.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  section.page > h2{font-size:1.3rem;margin:0 0 4px;color:var(--card);}
+  section.page > .sub{color:var(--muted);font-size:0.88rem;margin:0 0 18px;}
+
+  .card{
+    background:var(--card);color:var(--ink);border-radius:var(--radius);
+    padding:16px;margin-bottom:14px;box-shadow:var(--shadow);
+    border:1px dashed rgba(34,31,25,0.18);
+  }
+  .card h3{margin:0 0 8px;font-size:1.05rem;}
+  .card .meta{font-size:0.78rem;color:var(--ink-soft);margin-bottom:8px;}
+  .card p{margin:0 0 8px;line-height:1.45;font-size:0.95rem;}
+  .card img{max-width:100%;border-radius:10px;display:block;margin-top:8px;}
+
+  label{display:block;font-size:0.85rem;color:var(--muted);margin:10px 0 5px;}
+  section.page input[type=text],
+  section.page input[type=number],
+  section.page input[type=date],
+  section.page textarea,
+  section.page select{
+    width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid var(--line);
+    background:var(--surface);color:var(--card);font-size:0.95rem;font-family:inherit;
+  }
+  section.page textarea{min-height:80px;resize:vertical;}
+  input::placeholder,textarea::placeholder{color:var(--muted);opacity:0.7;}
+
+  .btn{
+    display:inline-block;padding:10px 16px;border-radius:10px;border:none;
+    background:var(--amber);color:var(--amber-ink);font-weight:700;cursor:pointer;font-size:0.9rem;
+  }
+  .btn.secondary{background:var(--surface);color:var(--card);border:1px solid var(--line);}
+  .btn.danger{background:var(--coral);color:#fff;}
+  .btn.block{width:100%;margin-top:12px;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+  .option-btn{
+    display:block;width:100%;text-align:left;padding:11px 14px;margin-bottom:8px;
+    border-radius:10px;border:1.5px solid rgba(34,31,25,0.15);background:#fff;
+    color:var(--ink);cursor:pointer;font-size:0.92rem;position:relative;overflow:hidden;
+  }
+  .option-btn .fill{
+    position:absolute;left:0;top:0;bottom:0;background:rgba(230,165,60,0.28);z-index:0;
+  }
+  .option-btn .label{position:relative;z-index:1;display:flex;justify-content:space-between;}
+  .option-btn.voted{border-color:var(--amber);font-weight:700;}
+
+  .admin-only{display:none;}
+  body.is-admin .admin-only{display:block;}
+
+  .empty{
+    text-align:center;color:var(--muted);padding:30px 10px;font-size:0.9rem;
+    border:1px dashed var(--line);border-radius:var(--radius);
+  }
+
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;background:var(--surface);
+    padding:4px 10px;border-radius:999px;font-size:0.78rem;color:var(--muted);margin-right:6px;
+  }
+  .chip.ok{background:rgba(127,160,138,0.2);color:var(--sage);}
+  .chip.no{background:rgba(217,115,85,0.2);color:var(--coral);}
+
+  .member-check{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(34,31,25,0.08);font-size:0.92rem;}
+
+  /* ---------- Streak ---------- */
+  .flame-big{text-align:center;padding:20px 10px 10px;}
+  .flame-big .num{font-family:'Fraunces',serif;font-size:3.4rem;font-weight:700;color:var(--coral);line-height:1;}
+  .flame-big .lbl{color:var(--muted);font-size:0.9rem;margin-top:4px;}
+
+  /* ---------- Ruota ---------- */
+  .wheel-wrap{display:flex;flex-direction:column;align-items:center;padding:10px 0 20px;}
+  .wheel-pointer{width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;
+    border-top:20px solid var(--coral);margin-bottom:-4px;z-index:2;}
+  #wheelSvg{filter:drop-shadow(0 8px 16px rgba(0,0,0,0.35));transition:transform 4.5s cubic-bezier(.17,.67,.16,1);}
+  .segment-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+  .segment-row input[type=text]{flex:2;}
+  .segment-row input[type=number]{flex:1;}
+
+  /* ---------- Bottom nav ---------- */
+  nav.tabbar{
+    position:fixed;left:0;right:0;bottom:0;display:flex;
+    background:var(--bg-alt);border-top:1px solid var(--line);z-index:20;
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  nav.tabbar button{
+    flex:1;background:none;border:none;color:var(--muted);padding:10px 2px 8px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:0.66rem;
+  }
+  nav.tabbar button .ic{font-size:1.25rem;}
+  nav.tabbar button.active{color:var(--amber);}
+
+  canvas{max-width:100%;}
+
+  #toast{
+    position:fixed;bottom:78px;left:50%;transform:translateX(-50%) translateY(10px);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:0.85rem;
+    opacity:0;pointer-events:none;transition:all .25s ease;z-index:60;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (min-width:640px){
+    nav.tabbar{max-width:640px;left:50%;transform:translateX(-50%);border-radius:16px 16px 0 0;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= MODALE: SCELTA NOME ================= -->
+<div id="nameModal">
+  <div class="box">
+    <h1>🧭 Il Diario della Combriccola</h1>
+    <p>Come ti chiami? Il tuo nome sarà visibile agli altri nel gruppo (voti, diario, code, ruota).</p>
+    <input id="nameInput" type="text" placeholder="Es. Marco" maxlength="24" />
+    <button id="nameSubmit">Entra nel gruppo</button>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <header class="top">
+    <div class="brand">🧭 Combriccola</div>
+    <div class="who">
+      <span class="streak-badge">🔥 <span id="headerStreak">0</span></span>
+      <span id="headerName"></span>
+      <button class="admin-btn" id="adminToggle">Admin</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ---------- VOTAZIONI ---------- -->
+    <section class="page active" data-page="voti">
+      <h2>🗳️ Votazioni</h2>
+      <p class="sub">Vota i sondaggi aperti e guarda il grafico in tempo reale.</p>
+
+      <div class="card admin-only">
+        <h3>Nuovo sondaggio</h3>
+        <label>Domanda</label>
+        <input type="text" id="pollQuestion" placeholder="Es. Dove andiamo sabato?" />
+        <label>Opzioni</label>
+        <div id="pollOptions"></div>
+        <div class="row">
+          <button class="btn secondary" id="addPollOption">+ Aggiungi opzione</button>
+        </div>
+        <button class="btn block" id="createPoll">Crea sondaggio</button>
+      </div>
+
+      <div id="pollsList"></div>
+    </section>
+
+    <!-- ---------- DIARIO ---------- -->
+    <section class="page" data-page="diario">
+      <h2>📔 Diario di bordo</h2>
+      <p class="sub">Racconta un momento: foto, pensieri, cose successe.</p>
+
+      <div class="card">
+        <label>Cosa vuoi raccontare?</label>
+        <textarea id="diaryText" placeholder="Oggi è successo che..."></textarea>
+        <label>Foto (facoltativa)</label>
+        <input type="file" id="diaryImage" accept="image/*" />
+        <button class="btn block" id="diarySubmit">Aggiungi al diario</button>
+      </div>
+
+      <div id="diaryList"></div>
+    </section>
+
+    <!-- ---------- QUESTIONARI ---------- -->
+    <section class="page" data-page="questionari">
+      <h2>📋 Questionari</h2>
+      <p class="sub">Rispondi in forma anonima. Gli admin vedono solo i totali.</p>
+
+      <div class="card admin-only">
+        <h3>Nuovo questionario</h3>
+        <label>Titolo</label>
+        <input type="text" id="qTitle" placeholder="Es. Feedback sul weekend" />
+        <div id="qQuestions"></div>
+        <button class="btn secondary" id="addQuestion">+ Aggiungi domanda</button>
+        <button class="btn block" id="createQuestionnaire">Pubblica questionario</button>
+      </div>
+
+      <div id="questList"></div>
+    </section>
+
+    <!-- ---------- STREAK ---------- -->
+    <section class="page" data-page="streak">
+      <h2>🔥 Streak di partecipazione</h2>
+      <p class="sub">Conta gli eventi consecutivi con almeno il 40% del gruppo presente.</p>
+
+      <div class="card">
+        <div class="flame-big">
+          <div class="num" id="streakCurrent">0</div>
+          <div class="lbl">streak attuale</div>
+        </div>
+        <div style="text-align:center;color:var(--ink-soft);font-size:0.85rem;">
+          Record del gruppo: <b id="streakRecord">0</b> · Amici nel gruppo: <b id="membersTotal">0</b>
+        </div>
+      </div>
+
+      <div class="card admin-only">
+        <h3>Registra un evento</h3>
+        <label>Titolo evento</label>
+        <input type="text" id="evTitle" placeholder="Es. Cena da Luca" />
+        <label>Data</label>
+        <input type="date" id="evDate" />
+        <label>Chi era presente?</label>
+        <div id="evMembers"></div>
+        <button class="btn block" id="evSubmit">Salva evento</button>
+      </div>
+
+      <div id="evList"></div>
+    </section>
+
+    <!-- ---------- CODA ---------- -->
+    <section class="page" data-page="coda">
+      <h2>🚗 Attesa in coda</h2>
+      <p class="sub">Segna quanti minuti pensi di aspettare in macchina, per ridere dopo su chi ha sbagliato di più.</p>
+
+      <div class="card">
+        <label>Minuti previsti</label>
+        <input type="number" id="queueMinutes" placeholder="Es. 15" min="0" />
+        <label>Nota (facoltativa)</label>
+        <input type="text" id="queueNote" placeholder="Es. semaforo del centro" />
+        <button class="btn block" id="queueSubmit">Aggiungi previsione</button>
+      </div>
+
+      <div class="card">
+        <h3>Classifica pazienza (minuti totali previsti)</h3>
+        <canvas id="queueChart" height="180"></canvas>
+      </div>
+
+      <div id="queueList"></div>
+    </section>
+
+    <!-- ---------- RUOTA ---------- -->
+    <section class="page" data-page="ruota">
+      <h2>🎡 Ruota della fortuna</h2>
+      <p class="sub">Gira e scopri la tua ricompensa.</p>
+
+      <div class="wheel-wrap">
+        <div class="wheel-pointer"></div>
+        <svg id="wheelSvg" width="260" height="260" viewBox="0 0 260 260"></svg>
+        <button class="btn block" id="spinBtn" style="max-width:220px;margin-top:18px;">Gira la ruota</button>
+      </div>
+
+      <div class="card admin-only">
+        <h3>Configura la ruota</h3>
+        <p class="meta">Imposta premio e peso (percentuale relativa) per ogni spicchio.</p>
+        <div id="wheelSegments"></div>
+        <div class="row">
+          <button class="btn secondary" id="addSegment">+ Aggiungi spicchio</button>
+          <button class="btn" id="saveWheel">Salva ruota</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Ultime giocate</h3>
+        <div id="spinHistory"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="tabbar">
+    <button data-page="voti" class="active"><span class="ic">🗳️</span>Voti</button>
+    <button data-page="diario"><span class="ic">📔</span>Diario</button>
+    <button data-page="questionari"><span class="ic">📋</span>Quiz</button>
+    <button data-page="streak"><span class="ic">🔥</span>Streak</button>
+    <button data-page="coda"><span class="ic">🚗</span>Coda</button>
+    <button data-page="ruota"><span class="ic">🎡</span>Ruota</button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs,
+  onSnapshot, query, orderBy, serverTimestamp, updateDoc, deleteField
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseApp = initializeApp(window.FIREBASE_CONFIG);
+const db = getFirestore(firebaseApp);
+const GROUP_ID = window.GROUP_ID;
+const gref = (...parts) => collection(db, "groups", GROUP_ID, ...parts);
+const dref = (col, id) => doc(db, "groups", GROUP_ID, col, id);
+
+/* ---------------- utilità generali ---------------- */
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+function uid(){
+  let id = localStorage.getItem("memberId");
+  if(!id){ id = crypto.randomUUID(); localStorage.setItem("memberId", id); }
+  return id;
+}
+function fmtDate(ts){
+  if(!ts) return "";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString("it-IT",{day:"2-digit",month:"short"}) + " · " +
+         d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+}
+const MEMBER_ID = uid();
+let MEMBER_NAME = localStorage.getItem("memberName") || "";
+let MEMBERS = {}; // id -> name
+
+/* ---------------- avvio / nome utente ---------------- */
+document.getElementById("nameSubmit").addEventListener("click", async ()=>{
+  const val = document.getElementById("nameInput").value.trim();
+  if(!val){ toast("Scrivi il tuo nome!"); return; }
+  MEMBER_NAME = val;
+  localStorage.setItem("memberName", val);
+  await setDoc(dref("members", MEMBER_ID), { name: val, updatedAt: serverTimestamp() }, { merge:true });
+  startApp();
+});
+if(MEMBER_NAME){ startApp(); }
+
+function startApp(){
+  document.getElementById("nameModal").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+  document.getElementById("headerName").textContent = MEMBER_NAME;
+  if(localStorage.getItem("isAdmin") === "1") document.body.classList.add("is-admin");
+  wireNav();
+  wireAdmin();
+  watchMembers();
+  wirePolls();
+  wireDiary();
+  wireQuestionnaires();
+  wireStreak();
+  wireQueue();
+  wireWheel();
+}
+
+/* ---------------- navigazione ---------------- */
+function wireNav(){
+  document.querySelectorAll("nav.tabbar button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll("nav.tabbar button").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll("section.page").forEach(s=>s.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelector(`section.page[data-page="${btn.dataset.page}"]`).classList.add("active");
+    });
+  });
+}
+
+/* ---------------- admin ---------------- */
+function wireAdmin(){
+  document.getElementById("adminToggle").addEventListener("click", ()=>{
+    if(document.body.classList.contains("is-admin")){
+      document.body.classList.remove("is-admin");
+      localStorage.removeItem("isAdmin");
+      toast("Modalità admin disattivata");
+      return;
+    }
+    const pw = prompt("Password admin:");
+    if(pw === window.ADMIN_PASSWORD){
+      document.body.classList.add("is-admin");
+      localStorage.setItem("isAdmin","1");
+      toast("Modalità admin attiva");
+    } else if(pw !== null){
+      toast("Password sbagliata");
+    }
+  });
+}
+
+/* ---------------- membri (condivisi da più sezioni) ---------------- */
+function watchMembers(){
+  onSnapshot(gref("members"), snap=>{
+    MEMBERS = {};
+    snap.forEach(d=> MEMBERS[d.id] = d.data().name);
+    document.getElementById("membersTotal").textContent = snap.size;
+    renderEventMemberCheckboxes();
+  });
+}
+
+/* =================================================================
+   1) VOTAZIONI
+   ================================================================= */
+function wirePolls(){
+  const optWrap = document.getElementById("pollOptions");
+  function addOptionInput(value=""){
+    const input = document.createElement("input");
+    input.type = "text"; input.placeholder = "Opzione"; input.value = value;
+    input.style.marginBottom = "8px";
+    optWrap.appendChild(input);
+  }
+  addOptionInput(); addOptionInput();
+  document.getElementById("addPollOption").addEventListener("click", ()=>addOptionInput());
+
+  document.getElementById("createPoll").addEventListener("click", async ()=>{
+    const question = document.getElementById("pollQuestion").value.trim();
+    const options = [...optWrap.querySelectorAll("input")].map(i=>i.value.trim()).filter(Boolean);
+    if(!question || options.length < 2){ toast("Serve una domanda e almeno 2 opzioni"); return; }
+    await addDoc(gref("polls"), { question, options, votes:{}, createdAt: serverTimestamp() });
+    document.getElementById("pollQuestion").value = "";
+    optWrap.innerHTML = ""; addOptionInput(); addOptionInput();
+    toast("Sondaggio creato!");
+  });
+
+  const charts = {};
+  onSnapshot(query(gref("polls"), orderBy("createdAt","desc")), snap=>{
+    const list = document.getElementById("pollsList");
+    if(snap.empty){ list.innerHTML = '<div class="empty">Nessun sondaggio ancora. Aspetta che un admin ne crei uno!</div>'; return; }
+    list.innerHTML = "";
+    snap.forEach(docSnap=>{
+      const p = docSnap.data(); const id = docSnap.id;
+      const votes = p.votes || {};
+      const counts = p.options.map((_,i)=> Object.values(votes).filter(v=>v===i).length);
+      const total = counts.reduce((a,b)=>a+b,0);
+      const myVote = votes[MEMBER_ID];
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<h3>${p.question}</h3><div class="meta">${total} voti</div>` +
+        p.options.map((opt,i)=>{
+          const pct = total ? Math.round(counts[i]/total*100) : 0;
+          return `<button class="option-btn ${myVote===i?'voted':''}" data-poll="${id}" data-idx="${i}">
+                    <span class="fill" style="width:${pct}%"></span>
+                    <span class="label"><span>${opt}</span><span>${pct}% (${counts[i]})</span></span>
+                  </button>`;
+        }).join("") +
+        `<canvas id="chart-${id}" height="140"></canvas>`;
+      list.appendChild(card);
+
+      card.querySelectorAll(".option-btn").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          const idx = Number(btn.dataset.idx);
+          await updateDoc(dref("polls", id), { [`votes.${MEMBER_ID}`]: idx });
+        });
+      });
+
+      const ctx = document.getElementById(`chart-${id}`);
+      if(charts[id]) charts[id].destroy();
+      charts[id] = new Chart(ctx, {
+        type:"bar",
+        data:{ labels:p.options, datasets:[{ data:counts, backgroundColor:"#e6a53c" }]},
+        options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1}} } }
+      });
+    });
+  });
+}
+
+/* =================================================================
+   2) DIARIO DI BORDO
+   ================================================================= */
+function wireDiary(){
+  document.getElementById("diarySubmit").addEventListener("click", async ()=>{
+    const text = document.getElementById("diaryText").value.trim();
+    const file = document.getElementById("diaryImage").files[0];
+    if(!text && !file){ toast("Scrivi qualcosa o allega una foto"); return; }
+    let image = null;
+    if(file){
+      try{ image = await compressImage(file); }
+      catch(e){ toast("Immagine troppo pesante, provane un'altra"); return; }
+    }
+    await addDoc(gref("diary"), { author: MEMBER_NAME, text, image, createdAt: serverTimestamp() });
+    document.getElementById("diaryText").value = "";
+    document.getElementById("diaryImage").value = "";
+    toast("Aggiunto al diario!");
+  });
+
+  onSnapshot(query(gref("diary"), orderBy("createdAt","desc")), snap=>{
+    const list = document.getElementById("diaryList");
+    if(snap.empty){ list.innerHTML = '<div class="empty">Il diario è vuoto. Racconta il primo momento!</div>'; return; }
+    list.innerHTML = "";
+    snap.forEach(d=>{
+      const e = d.data();
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<div class="meta">${e.author} · ${fmtDate(e.createdAt)}</div>` +
+        (e.text ? `<p>${escapeHtml(e.text)}</p>` : "") +
+        (e.image ? `<img src="${e.image}" alt="foto diario">` : "");
+      list.appendChild(card);
+    });
+  });
+}
+function compressImage(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxW = 900;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+        let quality = 0.7;
+        let dataUrl = canvas.toDataURL("image/jpeg", quality);
+        while(dataUrl.length > 700000 && quality > 0.3){
+          quality -= 0.1;
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
+        if(dataUrl.length > 900000) reject(new Error("too big"));
+        else resolve(dataUrl);
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+/* =================================================================
+   3) QUESTIONARI (anonimi)
+   ================================================================= */
+function wireQuestionnaires(){
+  const qWrap = document.getElementById("qQuestions");
+  function addQuestionBlock(){
+    const block = document.createElement("div");
+    block.className = "q-block";
+    block.style.cssText = "border:1px dashed rgba(34,31,25,0.2);border-radius:10px;padding:10px;margin:10px 0;";
+    block.innerHTML = `
+      <input type="text" class="q-text" placeholder="Testo della domanda" />
+      <div class="q-opts"></div>
+      <button type="button" class="btn secondary q-addopt" style="margin-top:6px;">+ Opzione</button>`;
+    qWrap.appendChild(block);
+    const optsWrap = block.querySelector(".q-opts");
+    function addOpt(){
+      const inp = document.createElement("input");
+      inp.type="text"; inp.placeholder="Opzione"; inp.className="q-opt-input";
+      inp.style.marginTop="6px";
+      optsWrap.appendChild(inp);
+    }
+    addOpt(); addOpt();
+    block.querySelector(".q-addopt").addEventListener("click", addOpt);
+  }
+  addQuestionBlock();
+  document.getElementById("addQuestion").addEventListener("click", addQuestionBlock);
+
+  document.getElementById("createQuestionnaire").addEventListener("click", async ()=>{
+    const title = document.getElementById("qTitle").value.trim();
+    const blocks = [...qWrap.querySelectorAll(".q-block")];
+    const domande = blocks.map(b=>({
+      text: b.querySelector(".q-text").value.trim(),
+      options: [...b.querySelectorAll(".q-opt-input")].map(i=>i.value.trim()).filter(Boolean)
+    })).filter(d=> d.text && d.options.length>=2);
+    if(!title || domande.length===0){ toast("Serve un titolo e almeno una domanda valida"); return; }
+    await addDoc(gref("questionnaires"), { title, domande, createdAt: serverTimestamp() });
+    document.getElementById("qTitle").value = "";
+    qWrap.innerHTML = ""; addQuestionBlock();
+    toast("Questionario pubblicato!");
+  });
+
+  const charts = {};
+  onSnapshot(query(gref("questionnaires"), orderBy("createdAt","desc")), snap=>{
+    const list = document.getElementById("questList");
+    if(snap.empty){ list.innerHTML = '<div class="empty">Nessun questionario al momento.</div>'; return; }
+    list.innerHTML = "";
+    snap.forEach(docSnap=>{
+      const q = docSnap.data(); const id = docSnap.id;
+      const answeredKey = `answered_${id}`;
+      const hasAnswered = localStorage.getItem(answeredKey) === "1";
+      const canSeeResults = hasAnswered || document.body.classList.contains("is-admin");
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<h3>${q.title}</h3>`;
+
+      if(!canSeeResults){
+        const form = document.createElement("div");
+        form.innerHTML = q.domande.map((d,di)=>`
+          <div style="margin-bottom:14px;">
+            <div style="font-weight:600;margin-bottom:6px;">${di+1}. ${d.text}</div>
+            ${d.options.map((o,oi)=>`
+              <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-bottom:4px;">
+                <input type="radio" name="q${id}_${di}" value="${oi}"> ${o}
+              </label>`).join("")}
+          </div>`).join("") +
+          `<button class="btn block send-answers">Invia risposte</button>`;
+        card.appendChild(form);
+        form.querySelector(".send-answers").addEventListener("click", async ()=>{
+          const answers = q.domande.map((d,di)=>{
+            const sel = form.querySelector(`input[name="q${id}_${di}"]:checked`);
+            return sel ? Number(sel.value) : null;
+          });
+          if(answers.includes(null)){ toast("Rispondi a tutte le domande"); return; }
+          await addDoc(collection(db,"groups",GROUP_ID,"questionnaires",id,"responses"), { answers, createdAt: serverTimestamp() });
+          localStorage.setItem(answeredKey, "1");
+          toast("Risposte inviate, grazie!");
+        });
+      } else {
+        const resultsDiv = document.createElement("div");
+        resultsDiv.innerHTML = q.domande.map((d,di)=>`
+          <div style="margin-bottom:16px;">
+            <div style="font-weight:600;margin-bottom:6px;">${di+1}. ${d.text}</div>
+            <canvas id="qc-${id}-${di}" height="140"></canvas>
+          </div>`).join("");
+        card.appendChild(resultsDiv);
+
+        onSnapshot(collection(db,"groups",GROUP_ID,"questionnaires",id,"responses"), rsnap=>{
+          const responses = rsnap.docs.map(r=>r.data());
+          q.domande.forEach((d,di)=>{
+            const counts = d.options.map((_,oi)=> responses.filter(r=>r.answers[di]===oi).length);
+            const chartKey = `${id}-${di}`;
+            const ctx = document.getElementById(`qc-${id}-${di}`);
+            if(!ctx) return;
+            if(charts[chartKey]) charts[chartKey].destroy();
+            charts[chartKey] = new Chart(ctx, {
+              type:"bar",
+              data:{ labels:d.options, datasets:[{ data:counts, backgroundColor:"#7fa08a" }]},
+              options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:1}} } }
+            });
+          });
+        });
+      }
+      list.appendChild(card);
+    });
+  });
+}
+
+/* =================================================================
+   4) STREAK DI PARTECIPAZIONE (stile Duolingo, sul 40% del gruppo)
+   ================================================================= */
+function renderEventMemberCheckboxes(){
+  const wrap = document.getElementById("evMembers");
+  if(!wrap) return;
+  wrap.innerHTML = Object.entries(MEMBERS).map(([id,name])=>`
+    <label class="member-check">
+      <input type="checkbox" class="ev-member" value="${id}"> ${name}
+    </label>`).join("") || '<div class="meta">Ancora nessun membro registrato.</div>';
+}
+
+function wireStreak(){
+  document.getElementById("evSubmit").addEventListener("click", async ()=>{
+    const title = document.getElementById("evTitle").value.trim();
+    const date = document.getElementById("evDate").value;
+    const present = [...document.querySelectorAll(".ev-member:checked")].map(c=>c.value);
+    const totalMembers = Object.keys(MEMBERS).length || 1;
+    if(!title || !date){ toast("Serve titolo e data"); return; }
+    await addDoc(gref("streakEvents"), {
+      title, date, attendeesCount: present.length, totalMembers,
+      createdAt: serverTimestamp()
+    });
+    document.getElementById("evTitle").value = "";
+    document.getElementById("evDate").value = "";
+    document.querySelectorAll(".ev-member").forEach(c=>c.checked=false);
+    toast("Evento registrato!");
+  });
+
+  onSnapshot(query(gref("streakEvents"), orderBy("date","asc")), snap=>{
+    const events = snap.docs.map(d=>d.data());
+    const list = document.getElementById("evList");
+    if(events.length === 0){
+      list.innerHTML = '<div class="empty">Nessun evento registrato ancora.</div>';
+      document.getElementById("streakCurrent").textContent = "0";
+      document.getElementById("streakRecord").textContent = "0";
+      document.getElementById("headerStreak").textContent = "0";
+      return;
+    }
+    const qualifying = events.map(e=> (e.attendeesCount / (e.totalMembers||1)) >= 0.4 );
+
+    // streak attuale: dal più recente indietro
+    let current = 0;
+    for(let i=qualifying.length-1;i>=0;i--){
+      if(qualifying[i]) current++; else break;
+    }
+    // record storico
+    let record = 0, run = 0;
+    qualifying.forEach(q=>{ run = q ? run+1 : 0; record = Math.max(record, run); });
+
+    document.getElementById("streakCurrent").textContent = current;
+    document.getElementById("streakRecord").textContent = record;
+    document.getElementById("headerStreak").textContent = current;
+
+    list.innerHTML = "<h3 style='color:var(--card);font-size:1rem;margin:16px 0 8px;'>Storico eventi</h3>" +
+      [...events].reverse().map((e,i)=>{
+        const idx = events.length-1-i;
+        const pct = Math.round((e.attendeesCount/(e.totalMembers||1))*100);
+        const ok = qualifying[idx];
+        return `<div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:700;">${e.title}</div>
+            <div class="meta">${new Date(e.date).toLocaleDateString("it-IT")} · ${e.attendeesCount}/${e.totalMembers} presenti (${pct}%)</div>
+          </div>
+          <span class="chip ${ok?'ok':'no'}">${ok?'✔ valido':'✘ sotto 40%'}</span>
+        </div>`;
+      }).join("");
+  });
+}
+
+/* =================================================================
+   5) ATTESA IN CODA
+   ================================================================= */
+function wireQueue(){
+  document.getElementById("queueSubmit").addEventListener("click", async ()=>{
+    const minutes = Number(document.getElementById("queueMinutes").value);
+    const note = document.getElementById("queueNote").value.trim();
+    if(!minutes || minutes<=0){ toast("Inserisci un numero di minuti valido"); return; }
+    await addDoc(gref("queueWaits"), { author: MEMBER_NAME, minutes, note, createdAt: serverTimestamp() });
+    document.getElementById("queueMinutes").value = "";
+    document.getElementById("queueNote").value = "";
+    toast("Previsione aggiunta!");
+  });
+
+  let chart;
+  onSnapshot(query(gref("queueWaits"), orderBy("createdAt","desc")), snap=>{
+    const entries = snap.docs.map(d=>d.data());
+    const list = document.getElementById("queueList");
+    if(entries.length === 0){
+      list.innerHTML = '<div class="empty">Nessuna previsione ancora. Chi aspetterà di più?</div>';
+    } else {
+      list.innerHTML = entries.map(e=>`
+        <div class="card">
+          <div class="meta">${e.author} · ${fmtDate(e.createdAt)}</div>
+          <p><b>${e.minutes} min</b>${e.note? " — "+escapeHtml(e.note) : ""}</p>
+        </div>`).join("");
+    }
+    const totals = {};
+    entries.forEach(e=>{ totals[e.author] = (totals[e.author]||0) + e.minutes; });
+    const labels = Object.keys(totals);
+    const data = Object.values(totals);
+    const ctx = document.getElementById("queueChart");
+    if(chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type:"bar",
+      data:{ labels, datasets:[{ data, backgroundColor:"#d97355" }]},
+      options:{ indexAxis:"y", plugins:{legend:{display:false}}, scales:{ x:{beginAtZero:true} } }
+    });
+  });
+}
+
+/* =================================================================
+   6) RUOTA DELLA FORTUNA
+   ================================================================= */
+const PALETTE = ["#e6a53c","#d97355","#7fa08a","#4c7a8c","#c9a66b","#8e5572","#a3b18a","#e08e79"];
+let wheelSegments = [];
+
+function wireWheel(){
+  const segWrap = document.getElementById("wheelSegments");
+  function renderAdminRows(segs){
+    segWrap.innerHTML = "";
+    segs.forEach((s,i)=>{
+      const row = document.createElement("div");
+      row.className = "segment-row";
+      row.innerHTML = `
+        <input type="text" class="seg-label" value="${s.label}" placeholder="Premio">
+        <input type="number" class="seg-weight" value="${s.weight}" min="1" placeholder="Peso %">
+        <button type="button" class="btn danger seg-del" style="padding:8px 10px;">✕</button>`;
+      segWrap.appendChild(row);
+      row.querySelector(".seg-del").addEventListener("click", ()=> row.remove());
+    });
+  }
+  document.getElementById("addSegment").addEventListener("click", ()=>{
+    const rows = [...segWrap.querySelectorAll(".segment-row")].map(r=>({
+      label: r.querySelector(".seg-label").value, weight: Number(r.querySelector(".seg-weight").value)||1
+    }));
+    rows.push({label:"Nuovo premio", weight:10});
+    renderAdminRows(rows);
+  });
+  document.getElementById("saveWheel").addEventListener("click", async ()=>{
+    const rows = [...segWrap.querySelectorAll(".segment-row")].map(r=>({
+      label: r.querySelector(".seg-label").value.trim(), weight: Number(r.querySelector(".seg-weight").value)||1
+    })).filter(s=>s.label);
+    if(rows.length < 2){ toast("Servono almeno 2 spicchi"); return; }
+    await setDoc(dref("wheel","config"), { segments: rows });
+    toast("Ruota aggiornata!");
+  });
+
+  onSnapshot(dref("wheel","config"), snap=>{
+    if(snap.exists() && snap.data().segments && snap.data().segments.length){
+      wheelSegments = snap.data().segments;
+    } else {
+      wheelSegments = [
+        {label:"Paghi tu il giro", weight:20},
+        {label:"Sei il DJ del viaggio", weight:20},
+        {label:"Ricompensa a sorpresa", weight:15},
+        {label:"Sedile davanti garantito", weight:15},
+        {label:"Un altro giro gratis", weight:15},
+        {label:"Niente, ritenta", weight:15},
+      ];
+    }
+    renderAdminRows(wheelSegments);
+    drawWheel(wheelSegments);
+  });
+
+  document.getElementById("spinBtn").addEventListener("click", ()=> spinWheel());
+
+  onSnapshot(query(gref("wheelSpins"), orderBy("createdAt","desc")), snap=>{
+    const box = document.getElementById("spinHistory");
+    if(snap.empty){ box.innerHTML = '<div class="empty">Nessuna giocata ancora.</div>'; return; }
+    box.innerHTML = snap.docs.slice(0,15).map(d=>{
+      const s = d.data();
+      return `<div style="padding:6px 0;border-bottom:1px solid rgba(34,31,25,0.08);font-size:0.9rem;">
+        <b>${s.member}</b> → ${s.result} <span class="meta">· ${fmtDate(s.createdAt)}</span>
+      </div>`;
+    }).join("");
+  });
+}
+
+let wheelAngles = []; // {start,end,mid,label}
+function drawWheel(segments){
+  const total = segments.reduce((a,s)=>a+s.weight,0) || 1;
+  const svg = document.getElementById("wheelSvg");
+  const cx=130, cy=130, r=124;
+  let angle = -90; // parte dall'alto
+  wheelAngles = [];
+  let paths = "";
+  segments.forEach((s,i)=>{
+    const sweep = (s.weight/total)*360;
+    const start = angle, end = angle+sweep;
+    const large = sweep > 180 ? 1 : 0;
+    const x1 = cx + r*Math.cos(start*Math.PI/180);
+    const y1 = cy + r*Math.sin(start*Math.PI/180);
+    const x2 = cx + r*Math.cos(end*Math.PI/180);
+    const y2 = cy + r*Math.sin(end*Math.PI/180);
+    const mid = start + sweep/2;
+    const lx = cx + (r*0.62)*Math.cos(mid*Math.PI/180);
+    const ly = cy + (r*0.62)*Math.sin(mid*Math.PI/180);
+    paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${PALETTE[i%PALETTE.length]}" stroke="#faf3e3" stroke-width="2"/>`;
+    paths += `<text x="${lx}" y="${ly}" font-size="10.5" font-family="Inter" fill="#20201c" text-anchor="middle" transform="rotate(${mid+90+180*(mid>90&&mid<270?0:0)},${lx},${ly})">${s.label.length>16? s.label.slice(0,15)+'…':s.label}</text>`;
+    // normalizza angolo (0-360, misurato da top clockwise) per calcolo spin
+    let normStart = (start+90+360)%360, normEnd = (end+90+360)%360, normMid=(mid+90+360)%360;
+    wheelAngles.push({start:normStart,end:normEnd,mid:normMid,label:s.label});
+    angle = end;
+  });
+  svg.innerHTML = paths + `<circle cx="${cx}" cy="${cy}" r="8" fill="#faf3e3"/>`;
+}
+
+let spinning = false;
+async function spinWheel(){
+  if(spinning || wheelAngles.length===0) return;
+  spinning = true;
+  const total = wheelAngles.length;
+  const totalWeight = wheelSegments.reduce((a,s)=>a+s.weight,0) || 1;
+  let r = Math.random()*totalWeight;
+  let winnerIdx = 0, acc = 0;
+  for(let i=0;i<wheelSegments.length;i++){
+    acc += wheelSegments[i].weight;
+    if(r <= acc){ winnerIdx = i; break; }
+  }
+  const winner = wheelAngles[winnerIdx];
+  const rotation = 360*6 + ((360 - winner.mid) % 360);
+  const svg = document.getElementById("wheelSvg");
+  svg.style.transform = `rotate(${rotation}deg)`;
+
+  setTimeout(async ()=>{
+    toast(`🎉 Hai vinto: ${winner.label}`);
+    await addDoc(gref("wheelSpins"), { member: MEMBER_NAME, result: winner.label, createdAt: serverTimestamp() });
+    spinning = false;
+  }, 4600);
+}
+</script>
+</body>
+</html>
