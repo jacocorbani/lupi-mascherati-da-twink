@@ -313,6 +313,11 @@
       </div>
 
       <div class="card admin-only">
+        <h3>Utenti registrati</h3>
+        <div id="membersAdminList"></div>
+      </div>
+
+      <div class="card admin-only">
         <h3>Registra un evento</h3>
         <label>Titolo evento</label>
         <input type="text" id="evTitle" placeholder="Es. Cena da Luca" />
@@ -392,7 +397,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   getFirestore, collection, addDoc, doc, setDoc, getDoc, getDocs,
-  onSnapshot, query, orderBy, serverTimestamp, updateDoc, deleteField
+  onSnapshot, query, orderBy, serverTimestamp, updateDoc, deleteField, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const firebaseApp = initializeApp(window.FIREBASE_CONFIG);
@@ -420,7 +425,7 @@ function fmtDate(ts){
   return d.toLocaleDateString("it-IT",{day:"2-digit",month:"short"}) + " · " +
          d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 }
-const MEMBER_ID = uid();
+let MEMBER_ID = uid();
 let MEMBER_NAME = localStorage.getItem("memberName") || "";
 let MEMBERS = {}; // id -> name
 
@@ -428,10 +433,30 @@ let MEMBERS = {}; // id -> name
 document.getElementById("nameSubmit").addEventListener("click", async ()=>{
   const val = document.getElementById("nameInput").value.trim();
   if(!val){ toast("Scrivi il tuo nome!"); return; }
-  MEMBER_NAME = val;
-  localStorage.setItem("memberName", val);
-  await setDoc(dref("members", MEMBER_ID), { name: val, updatedAt: serverTimestamp() }, { merge:true });
-  startApp();
+  const btn = document.getElementById("nameSubmit");
+  btn.disabled = true; btn.textContent = "Un attimo...";
+  try{
+    // Se un utente con questo nome esiste già nel gruppo, entra come lui
+    // invece di crearne uno nuovo (nomi confrontati senza maiuscole/minuscole).
+    const existingSnap = await getDocs(gref("members"));
+    let existingId = null, existingName = val;
+    existingSnap.forEach(d=>{
+      const n = (d.data().name || "").trim().toLowerCase();
+      if(n === val.toLowerCase()){ existingId = d.id; existingName = d.data().name; }
+    });
+    if(existingId){
+      MEMBER_ID = existingId;
+      MEMBER_NAME = existingName;
+      localStorage.setItem("memberId", MEMBER_ID);
+    } else {
+      MEMBER_NAME = val;
+    }
+    localStorage.setItem("memberName", MEMBER_NAME);
+    await setDoc(dref("members", MEMBER_ID), { name: MEMBER_NAME, updatedAt: serverTimestamp() }, { merge:true });
+    startApp();
+  } finally {
+    btn.disabled = false; btn.textContent = "Entra nel gruppo";
+  }
 });
 if(MEMBER_NAME){ startApp(); }
 
@@ -490,7 +515,16 @@ function watchMembers(){
     snap.forEach(d=> MEMBERS[d.id] = d.data().name);
     document.getElementById("membersTotal").textContent = snap.size;
     renderEventMemberCheckboxes();
+    renderMembersAdminList();
   });
+}
+function renderMembersAdminList(){
+  const box = document.getElementById("membersAdminList");
+  if(!box) return;
+  const names = Object.values(MEMBERS);
+  box.innerHTML = names.length
+    ? names.map(n=>`<div class="member-check">👤 ${n}</div>`).join("")
+    : '<div class="meta">Nessun utente ancora.</div>';
 }
 
 /* =================================================================
@@ -539,7 +573,8 @@ function wirePolls(){
                     <span class="label"><span>${opt}</span><span>${pct}% (${counts[i]})</span></span>
                   </button>`;
         }).join("") +
-        `<canvas id="chart-${id}" height="140"></canvas>`;
+        `<canvas id="chart-${id}" height="140"></canvas>` +
+        `<button class="btn danger admin-only" data-delpoll="${id}" style="margin-top:10px;">Elimina sondaggio</button>`;
       list.appendChild(card);
 
       card.querySelectorAll(".option-btn").forEach(btn=>{
@@ -547,6 +582,12 @@ function wirePolls(){
           const idx = Number(btn.dataset.idx);
           await updateDoc(dref("polls", id), { [`votes.${MEMBER_ID}`]: idx });
         });
+      });
+      card.querySelector(`[data-delpoll="${id}"]`).addEventListener("click", async ()=>{
+        if(confirm("Eliminare questo sondaggio? L'azione non si può annullare.")){
+          await deleteDoc(dref("polls", id));
+          toast("Sondaggio eliminato");
+        }
       });
 
       const ctx = document.getElementById(`chart-${id}`);
