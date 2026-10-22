@@ -1,0 +1,21 @@
+{
+  "name": "diario-combriccola",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "test": "node --test tests/unit.test.js",
+    "test:rules": "firebase emulators:exec --project demo-combriccola --only firestore,storage \"node --test tests/rules.test.js\"",
+    "test:integration": "firebase emulators:exec --project demo-combriccola --only auth,firestore,storage,functions \"node --test tests/integration.test.js\""
+  },
+  "dependencies": {
+    "firebase": "^12.0.0"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0",
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase-tools": "^14.0.0"
+  }
+}

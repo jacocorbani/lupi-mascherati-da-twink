@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function account() { return get(/databases/$(database)/documents/access/$(request.auth.uid)).data; }
+    function enrolled() { return request.auth != null && account().active == true && request.auth.token.sessionVersion == account().sessionVersion; }
+    function member() { return enrolled() && account().mustChangePassword == false; }
+    function admin() { return member() && request.auth.token.admin == true; }
+    match /access/{uid} { allow get: if (enrolled() && request.auth.uid == uid) || admin(); }
+    match /members/{uid} { allow read: if member(); }
+    match /privateMembers/{uid} { allow get: if member() && (request.auth.uid == uid || admin()); allow list: if admin(); }
+    match /diary/{postId} { allow read: if member(); }
+    match /events/{eventId} { allow read: if member(); match /attendance/{uid} { allow read: if member(); } }
+    match /polls/{pollId} { allow read: if member(); match /votes/{uid} { allow read: if member(); } }
+    match /wheel/{configId} { allow read: if member(); }
+    match /wheelSpins/{spinId} { allow read: if member(); }
+    match /rankings/{rankingId} { allow read: if member(); }
+    match /historical/{itemId} { allow read: if admin(); }
+    // All mutations pass through validated callable functions. Legacy paths are denied.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
