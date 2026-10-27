@@ -1,6 +1,6 @@
 # Verifiche effettivamente eseguite
 
-Test completi: 16 ottobre 2026. Ricontrollo unitari (7/7) e build finale: 22 ottobre 2026. Ambiente Windows locale; Node 24.19.0, Firebase CLI 14.27.0, Java Temurin 21. Emulatori isolati `demo-combriccola`. Runtime Cloud Functions configurato Node 22: il collaudo cloud sul runtime di destinazione resta necessario.
+Test completi: 16 ottobre 2026. Ricontrollo unitari (7/7) e build finale: 22 ottobre 2026. Ambiente Windows locale; Node 24.19.0, Firebase CLI 14.27.0, Java Temurin 21. Emulatori isolati `demo-combriccola`. Runtime Cloud Functions configurato Node 22. Anche la CI GitHub su Ubuntu/Node 22 ha superato tutte le suite e la build il 22 ottobre 2026 (run 39817131479). Il collaudo cloud resta necessario.
 
 | Verifica                                | Risultato                                                                                               |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------- |
