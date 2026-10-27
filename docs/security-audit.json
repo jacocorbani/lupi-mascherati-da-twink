@@ -1,0 +1,9 @@
+{
+  "score": 4,
+  "summary": "Regole deny-by-default e scritture esclusivamente server. I casi negativi degli emulatori sono superati. Rilascio subordinato al collaudo cloud e alla configurazione Auth/App Check.",
+  "findings": [
+    {"check":"Storage overwrite","severity":"major","issue":"Il test iniziale consentiva sovrascritture; corretto con resource == null e rieseguito con successo.","recommendation":"Mantenere il test di regressione."},
+    {"check":"Production configuration","severity":"major","issue":"Le regole attualmente in produzione sono aperte. Le nuove regole non sono state distribuite per rispettare il vincolo di approvazione.","recommendation":"Approvare un passaggio coordinato con account Auth e backend, dopo backup e collaudo."},
+    {"check":"Storage lifecycle","severity":"minor","issue":"Le immagini orfane non vengono rimosse automaticamente.","recommendation":"Aggiungere una pulizia amministrativa che verifichi tutti i riferimenti prima della cancellazione."}
+  ]
+}
