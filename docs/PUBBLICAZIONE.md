@@ -1,6 +1,6 @@
 # Checklist di rilascio — approvazione richiesta
 
-Il merge e la pubblicazione non sono stati autorizzati. Non eseguire i passi di produzione prima della revisione.
+Il 13 novembre 2026 il proprietario ha autorizzato migrazione, merge e pubblicazione. L'autorizzazione non sostituisce i prerequisiti tecnici: completare servizi, staging, checkpoint e verifica degli accessi prima del passaggio. Stato attuale: fatturazione disattivata, nessun conto accessibile all'operatore, Auth non inizializzato, nessun bucket Storage. L'attivazione della fatturazione richiede il proprietario.
 
 1. Rivedere commit, test e `docs/INVENTARIO.md`; verificare il piano Firebase e approvare eventuali costi di Cloud Functions e Storage. Non attivare automaticamente Blaze.
 2. Verificare backup dati e regole esistenti, conservare gli hash e una copia separata protetta. La sostituzione delle regole interrompe il vecchio client: pianificare una finestra di passaggio, senza distribuire prima le nuove regole sulla vecchia app.
@@ -12,7 +12,7 @@ Il merge e la pubblicazione non sono stati autorizzati. Non eseguire i passi di 
 8. Configurare la build con le variabili `.env.example` per il progetto reale e `VITE_USE_EMULATORS=false`. Verificare che `VITE_APPCHECK_SITE_KEY` sia valorizzata.
 9. Dopo approvazione esplicita, distribuire Functions e regole selezionate con CLI e `--project lupimacheratidatwink`; rivedere l'eventuale richiesta di abilitazione API/IAM/costi. Non distribuire servizi estranei.
 10. Creare il primo admin da un ambiente fidato con credenziali operatore ADC, lo script `functions/bootstrap-admin.js` e `APPROVE_ADMIN_BOOTSTRAP` uguale al project ID. Non pubblicare endpoint di bootstrap; comunicare la password temporanea privatamente. Lo script non assegna ruoli ad account preesistenti e fallisce se lo username esiste.
-11. Confermare il mapping delle identità, eseguire la migrazione in staging e approvare separatamente l'importazione di produzione. L'importatore incluso accetta solo emulatori demo: la modalità produzione deve essere aggiunta dopo la revisione del piano reale, non attivata implicitamente.
+11. Conservare inizialmente i contenuti come storico senza associazioni personali implicite. Eseguire la prova in staging; seguire `docs/MIGRAZIONE.md` per l'importatore di produzione e il checkpoint. L'autorizzazione del proprietario è acquisita; restano necessari backup fresco, accessi funzionanti e ambiente protetto prima dell'importazione.
 12. Ottenere approvazione al merge. Pubblicare l'output `dist/` tramite un workflow Pages manuale o il processo approvato; non servire i sorgenti Vite direttamente dalla radice del repository. Aggiornare la configurazione Pages solo con approvazione.
 13. Collaudare login, password, account disabilitato, foto private, sondaggio concorrente, eventi, ruota e gestione mobile sul dominio finale. Conservare il piano di ripristino.
 

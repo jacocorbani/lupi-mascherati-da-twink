@@ -2,7 +2,7 @@
 
 Web app privata in italiano: dashboard, diario fotografico, sondaggi, calendario con partecipazioni, ruota con estrazione server, classifiche, profilo e amministrazione.
 
-**Branch di revisione, non ancora pubblicato.** Nessun deploy automatico e nessuna modifica a `main` o al database originale. Consultare `docs/VERIFICHE.md` e `docs/PUBBLICAZIONE.md` prima del rilascio.
+**Branch di revisione, non ancora pubblicato.** Migrazione e rilascio autorizzati dal proprietario il 13 novembre 2026; preparazione in corso, subordinata all'attivazione dei servizi Firebase e al collaudo cloud. Nessun deploy automatico e nessuna modifica a `main` o al database originale. Consultare `docs/VERIFICHE.md` e `docs/PUBBLICAZIONE.md` prima del rilascio.
 
 ## Sviluppo locale
 

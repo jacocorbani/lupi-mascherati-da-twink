@@ -45,6 +45,20 @@ Gli ID derivano dai percorsi originali; la seconda esecuzione salta i documenti 
 
 In staging eliminare esclusivamente gli elementi creati riportati nel journal, dopo aver verificato che nessuno li abbia modificati e aver salvato un export dell'ambiente. Per una produzione futura il rollback deve includere checkpoint dei documenti v2, oggetti Storage e regole precedenti, oltre alla versione del frontend. Conservare sempre la sorgente legacy; ripristinare la vecchia app non risolve le sue debolezze di autenticazione. Non eliminare automaticamente il database originale.
 
+## Importatore di produzione
+
+L'autorizzazione del proprietario è stata acquisita il 13 novembre 2026. Il nuovo `functions/import-production.js` rigenera il piano dal backup verificato; non accetta destinazioni arbitrarie né mapping automatici. Senza `--apply` esegue soltanto il dry-run, senza autenticazione o richieste remote:
+
+```sh
+node functions/import-production.js BACKUP SHA256 lupimacheratidatwink.firebasestorage.app
+```
+
+Il passaggio reale richiede `--apply`, `MIGRATION_APPROVED_PROJECT=lupimacheratidatwink` e `MIGRATION_CUTOVER_READY=SHA256`. Quest'ultimo checkpoint va impostato dall'operatore soltanto dopo staging, verifica del primo amministratore, backend e build pronti e chiusura delle scritture legacy durante la finestra di passaggio. Non importare dati nelle collezioni v2 mentre le regole globali sono ancora aperte. Il backup deve essere stato creato da meno di un'ora, dopo il blocco delle scritture, e conservato insieme alle regole precedenti. Se il progetto usa un bucket `.appspot.com`, passare quel nome verificato invece del suffisso nuovo.
+
+Lo script usa la sessione Firebase CLI dell'operatore senza salvare token. Il journal JSONL privato viene sincronizzato su disco prima di ogni scrittura. Documenti e immagini sono creati senza sovrascritture e riletti per verificarne il contenuto. Una nuova esecuzione verifica anche gli oggetti già presenti e si arresta se un documento o un'immagine è stato alterato. Se si interrompe tra upload e documento, la ripresa verifica e riutilizza l'immagine. Non avvengono cancellazioni automatiche. Conservare tutti i journal, inclusi quelli interrotti, per il ripristino.
+
+Backup del 13 novembre: 99 documenti; 113 scritture pianificate, 6 segnalazioni, 13 membri senza associazione verificata. Questo backup serve alla preparazione e deve essere rinnovato nella finestra di passaggio. Nessuna importazione in produzione è stata ancora eseguita.
+
 ## Cosa resta subordinato ai dati reali
 
 Associazioni personali, gestione di documenti oltre limite, conversione operativa di questionari/coda/streak e importazione in produzione richiedono la revisione del report reale. Le date mancanti non sono inventate. Le immagini non riconosciute rimangono nella copia originale riservata. In caso di interruzione, controllare documenti già scritti e Storage prima di ripetere l'importazione.

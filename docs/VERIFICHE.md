@@ -35,3 +35,7 @@ Le callable sono state testate attraverso HTTP negli emulatori: creazione accoun
 Deploy Firebase o Pages, test cloud di App Check, test provider Auth in produzione, migrazione reale, associazione delle identità, prova su staging cloud separato, rollback in produzione, stress test, audit indipendente completo e collaudo esaustivo di ogni browser. Non è stato simulato un distacco di rete reale nel browser: è presente il controllo offline, ma quel caso richiede ancora collaudo manuale.
 
 Le nuove regole sono una proposta verificata negli emulatori e pronta per revisione; nessun insieme finito di test certifica l'assenza di ogni vulnerabilità. La loro applicazione deve essere coordinata con il nuovo frontend e i nuovi account.
+
+## Preparazione migrazione — 13 novembre 2026
+
+Nuovo backup: 99 documenti, SHA-256 verificato. Dry-run: 113 scritture, 6 segnalazioni. Test unitari 7/7 rieseguiti. Suite migrazione ampliata a 3/3: checkpoint/hash, ripresa dopo interruzione, verifica dei documenti e immagini, conflitti e idempotenza. I 2 nuovi test portano il totale implementato a 29; le altre suite non sono state rieseguite in questo passaggio. Nessun import o deploy reale eseguito: fatturazione e servizi cloud ancora da attivare.
