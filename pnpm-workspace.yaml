@@ -1,0 +1,8 @@
+packages:
+  - '.'
+  - 'functions'
+allowBuilds:
+  esbuild: true
+  protobufjs: true
+  '@firebase/util': true
+  re2: false

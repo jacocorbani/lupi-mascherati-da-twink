@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function member() {
+      let account = firestore.get(/databases/(default)/documents/access/$(request.auth.uid)).data;
+      return request.auth != null && account.active == true && account.mustChangePassword == false && request.auth.token.sessionVersion == account.sessionVersion;
+    }
+    match /media/{uid}/{fileId} {
+      allow read: if member();
+      allow create: if resource == null && member() && request.auth.uid == uid && request.resource.size > 0 && request.resource.size <= 5 * 1024 * 1024 && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow delete: if member() && (request.auth.uid == uid || request.auth.token.admin == true);
+    }
+    match /{path=**} { allow read, write: if false; }
+  }
+}

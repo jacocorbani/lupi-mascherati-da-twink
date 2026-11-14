@@ -1,0 +1,20 @@
+{
+  "fieldOverrides": [
+    {
+      "collectionGroup": "diary",
+      "indexes": [],
+      "fieldPath": "image"
+    },
+    {
+      "collectionGroup": "members",
+      "indexes": [],
+      "fieldPath": "avatar"
+    },
+    {
+      "collectionGroup": "historical",
+      "indexes": [],
+      "fieldPath": "legacy"
+    }
+  ],
+  "indexes": []
+}

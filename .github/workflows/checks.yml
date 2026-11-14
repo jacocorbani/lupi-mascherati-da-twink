@@ -1,0 +1,28 @@
+name: Verifiche Spark
+on:
+  push:
+    branches: [sviluppo-v2]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.25.0'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm exec firebase emulators:exec --non-interactive --project demo-combriccola --only auth,firestore 'node --test --test-concurrency=1 tests/spark-integration.test.js tests/spark-migration.test.js tests/spark-rules.test.js'
+      - run: pnpm build
+
