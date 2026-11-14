@@ -1,64 +1,28 @@
-# Conservazione e migrazione
-
-Il vecchio client legge `groups/combriccola-principale`. Non dedurre che sia vuoto. I vecchi membri non sono identità Firebase verificate. Il diario e la coda conservano nomi testuali; i sondaggi associano voti a ID locali; gli streak conservano solo conteggi, non i partecipanti selezionati. I questionari hanno risposte in sottocollezioni e il blocco del voto nel vecchio client è locale al browser.
+# Migrazione Spark e ripristino
+La sorgente è `groups/combriccola-principale`. I nomi legacy non sono identità Firebase: nessuna attribuzione automatica. I documenti originali restano nella sorgente e in un archivio `historical/legacy_HASH` leggibile solo dagli amministratori.
 
 ## Backup
+`node scripts/backup-production.cjs` usa la sessione Firebase CLI dell'operatore, legge ricorsivamente gruppo e sottocollezioni e scrive un JSON con hash SHA-256 verificato tramite rilettura. È un backup logico, non uno snapshot transazionale: quello finale va eseguito dopo il blocco delle scritture legacy nella finestra di passaggio.
 
-`functions/backup.js PROJECT_ID` legge ricorsivamente il gruppo e tutte le sottocollezioni con credenziali operatore ADC. Scrive in `backups/` un JSON e il suo SHA-256. Non esporta password o account Auth. Il backup è una lettura paginata logica, non uno snapshot transazionale: eseguirlo in una finestra senza scritture o usare anche un export gestito Firestore approvato. Conservare separatamente le regole e gli eventuali file Storage.
-
-Verificare hash, numero documenti, sottocollezioni e possibilità di rilettura prima di qualsiasi importazione. Non caricare backup o report con dati personali su GitHub.
-
-## Dry-run
+## Piano gratuito
+`scripts/spark-plan.js` prepara archivio e diario v2. Le foto fino a 300.000 caratteri restano inline; quelle più grandi vengono ridimensionate e convertite localmente in JPEG tramite Sharp. L'originale integrale rimane nell'archivio e nel backup. Le date non vengono inventate; gli autori non associati restano storici. Voti legacy non autenticati non entrano nei nuovi sondaggi.
 
 ```sh
-node scripts/migrate.js backups/backup.json mapping.local.json
+node functions/import-spark.js BACKUP SHA256
 ```
+Senza `--apply` non esegue richieste remote. Il dry-run aggiornato del 13 novembre conta 99 documenti, 113 scritture, 7 immagini e 6 segnalazioni; va rinnovato prima del passaggio.
 
-La modalità è sempre dry-run: crea `reports/private/migration-plan.json` e un riepilogo. Un mapping accettato ha struttura:
-
-```json
-{
-  "diary:legacy-post-id": {
-    "uid": "uid-verificato",
-    "verified": true,
-    "verifiedBy": "operatore",
-    "verifiedAt": "data-ISO"
-  }
-}
-```
-
-Per i membri la chiave è l'ID legacy; per i post è `diary:ID` perché il vecchio autore è solo un nome. Il codice non tenta match per nome, anche se apparentemente univoco. Il mapping deve essere approvato dalla persona competente; il flag non prova da solo la correttezza dell'identità.
-
-Ogni documento originale viene copiato in `historical/legacy_HASH` leggibile solo dagli admin. Il diario viene preparato anche in `diary/legacy_HASH` con autore UID verificato o `null` (visualizzato come membro storico), fotografie convertibili in Storage e date conservate. Voti non autenticati non vengono sommati ai nuovi voti.
-
-## Prova negli emulatori
-
-Avviare emulatori con `--project demo-combriccola`, impostare `GCLOUD_PROJECT=demo-combriccola`, `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`, `FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199`, quindi:
-
+## Importazione
+Impostare `MIGRATION_CUTOVER_READY=SHA256` solo dopo test, preparazione del frontend e chiusura dei percorsi legacy. Il backup di produzione deve avere meno di un'ora. Eseguire:
 ```sh
-node functions/import-staging.js reports/private/migration-plan.json
+node functions/import-spark.js BACKUP SHA256 --apply
 ```
+Non serve un bucket. Il progetto di produzione è vincolato a `lupimacheratidatwink`; eventuali emulatori devono usare un progetto `demo-` con Auth e Firestore attivi.
 
-Gli ID derivano dai percorsi originali; la seconda esecuzione salta i documenti già presenti. Le scritture usano `create`, non sovrascrivono. Il journal indica elementi creati e già presenti. Un conflitto deve essere revisionato: non assumere che «già presente» significhi contenuto identico. Nessuna cancellazione degli originali.
+Lo strumento genera un journal JSONL privato, sincronizzato prima di ogni scrittura. Usa creazione senza sovrascrittura e confronta contenuti e hash durante la ripresa. Un conflitto interrompe l'esecuzione. Nessuna cancellazione automatica.
 
-## Ripristino
+## Verifica e ripristino
+Conservare i journal di tutte le esecuzioni, anche interrotte. Verificare che il numero di documenti importati corrisponda al piano e che il diario contenga le immagini attese. In caso di rollback non eliminare le sorgenti legacy. Prima di rimuovere eventuali documenti v2, verificare che coincidano ancora con i contenuti del journal e salvare un nuovo backup di ogni modifica successiva. Tenere il frontend in manutenzione durante un ripristino. La vecchia app e le sue regole aperte non costituiscono una soluzione sicura di rollback.
 
-In staging eliminare esclusivamente gli elementi creati riportati nel journal, dopo aver verificato che nessuno li abbia modificati e aver salvato un export dell'ambiente. Per una produzione futura il rollback deve includere checkpoint dei documenti v2, oggetti Storage e regole precedenti, oltre alla versione del frontend. Conservare sempre la sorgente legacy; ripristinare la vecchia app non risolve le sue debolezze di autenticazione. Non eliminare automaticamente il database originale.
+Questionari, coda, streak e vecchie estrazioni sono conservati nell'archivio; la loro conversione in funzioni interattive non è inclusa.
 
-## Importatore di produzione
-
-L'autorizzazione del proprietario è stata acquisita il 13 novembre 2026. Il nuovo `functions/import-production.js` rigenera il piano dal backup verificato; non accetta destinazioni arbitrarie né mapping automatici. Senza `--apply` esegue soltanto il dry-run, senza autenticazione o richieste remote:
-
-```sh
-node functions/import-production.js BACKUP SHA256 lupimacheratidatwink.firebasestorage.app
-```
-
-Il passaggio reale richiede `--apply`, `MIGRATION_APPROVED_PROJECT=lupimacheratidatwink` e `MIGRATION_CUTOVER_READY=SHA256`. Quest'ultimo checkpoint va impostato dall'operatore soltanto dopo staging, verifica del primo amministratore, backend e build pronti e chiusura delle scritture legacy durante la finestra di passaggio. Non importare dati nelle collezioni v2 mentre le regole globali sono ancora aperte. Il backup deve essere stato creato da meno di un'ora, dopo il blocco delle scritture, e conservato insieme alle regole precedenti. Se il progetto usa un bucket `.appspot.com`, passare quel nome verificato invece del suffisso nuovo.
-
-Lo script usa la sessione Firebase CLI dell'operatore senza salvare token. Il journal JSONL privato viene sincronizzato su disco prima di ogni scrittura. Documenti e immagini sono creati senza sovrascritture e riletti per verificarne il contenuto. Una nuova esecuzione verifica anche gli oggetti già presenti e si arresta se un documento o un'immagine è stato alterato. Se si interrompe tra upload e documento, la ripresa verifica e riutilizza l'immagine. Non avvengono cancellazioni automatiche. Conservare tutti i journal, inclusi quelli interrotti, per il ripristino.
-
-Backup del 13 novembre: 99 documenti; 113 scritture pianificate, 6 segnalazioni, 13 membri senza associazione verificata. Questo backup serve alla preparazione e deve essere rinnovato nella finestra di passaggio. Nessuna importazione in produzione è stata ancora eseguita.
-
-## Cosa resta subordinato ai dati reali
-
-Associazioni personali, gestione di documenti oltre limite, conversione operativa di questionari/coda/streak e importazione in produzione richiedono la revisione del report reale. Le date mancanti non sono inventate. Le immagini non riconosciute rimangono nella copia originale riservata. In caso di interruzione, controllare documenti già scritti e Storage prima di ripetere l'importazione.

@@ -73,6 +73,7 @@ export function wheel(state) {
         ),
         result,
         spin,
+        muted("Estrazione nel browser, per gioco: il server non ne certifica la casualità."),
         ...segments.map((s) => muted(`${s.label} · peso ${s.weight}`)),
       ),
       card(

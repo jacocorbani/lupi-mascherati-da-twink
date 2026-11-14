@@ -1,9 +1,1 @@
-{
-  "score": 4,
-  "summary": "Regole deny-by-default e scritture esclusivamente server. I casi negativi degli emulatori sono superati. Rilascio subordinato al collaudo cloud e alla configurazione Auth/App Check.",
-  "findings": [
-    {"check":"Storage overwrite","severity":"major","issue":"Il test iniziale consentiva sovrascritture; corretto con resource == null e rieseguito con successo.","recommendation":"Mantenere il test di regressione."},
-    {"check":"Production configuration","severity":"major","issue":"Le regole attualmente in produzione sono aperte. Il rilascio è autorizzato dal 13 novembre 2026, ma fatturazione, servizi e collaudo cloud non sono ancora pronti per il passaggio coordinato.","recommendation":"Approvare un passaggio coordinato con account Auth e backend, dopo backup e collaudo."},
-    {"check":"Storage lifecycle","severity":"minor","issue":"Le immagini orfane non vengono rimosse automaticamente.","recommendation":"Aggiungere una pulizia amministrativa che verifichi tutti i riferimenti prima della cancellazione."}
-  ]
-}
+{"summary":"Spark: regole con validazione, UID immutabili, dati privati separati e iscrizione gestita soltanto localmente. 13 test regole e 5 flussi integrazione superati; non costituiscono certificazione di sicurezza.","findings":[{"check":"Password temporanea","severity":"limitation","issue":"Il cambio iniziale è richiesto dall'interfaccia, non provabile dalle regole.","recommendation":"Consegnare privatamente le credenziali e cambiarle subito."},{"check":"Quote Spark","severity":"limitation","issue":"Un membro può esaurire le quote; nessun rate limit applicativo globale.","recommendation":"Monitorare utilizzo e disabilitare account abusivi localmente."},{"check":"Ruota","severity":"accepted","issue":"Casualità nel browser, modificabile da un client ostile.","recommendation":"Usare soltanto per gioco, come indicato nella UI."}]}

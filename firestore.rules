@@ -1,21 +1,77 @@
 rules_version = '2';
+// Spark: access/privateMembers only local Admin SDK; profiles split public/private.
+// Diary owns text/image and immutable author/time; votes are immutable UID documents.
+// Admin: polls, events, wheel and rankings. Spins are explicitly browser-generated.
+// Inline images <=300000 chars. Historical and legacy data are never client-writable.
 service cloud.firestore {
-  match /databases/{database}/documents {
-    function account() { return get(/databases/$(database)/documents/access/$(request.auth.uid)).data; }
-    function enrolled() { return request.auth != null && account().active == true && request.auth.token.sessionVersion == account().sessionVersion; }
-    function member() { return enrolled() && account().mustChangePassword == false; }
-    function admin() { return member() && request.auth.token.admin == true; }
-    match /access/{uid} { allow get: if (enrolled() && request.auth.uid == uid) || admin(); }
-    match /members/{uid} { allow read: if member(); }
-    match /privateMembers/{uid} { allow get: if member() && (request.auth.uid == uid || admin()); allow list: if admin(); }
-    match /diary/{postId} { allow read: if member(); }
-    match /events/{eventId} { allow read: if member(); match /attendance/{uid} { allow read: if member(); } }
-    match /polls/{pollId} { allow read: if member(); match /votes/{uid} { allow read: if member(); } }
-    match /wheel/{configId} { allow read: if member(); }
-    match /wheelSpins/{spinId} { allow read: if member(); }
-    match /rankings/{rankingId} { allow read: if member(); }
-    match /historical/{itemId} { allow read: if admin(); }
-    // All mutations pass through validated callable functions. Legacy paths are denied.
-    match /{document=**} { allow read, write: if false; }
+ match /databases/{database}/documents {
+  function account() { return get(/databases/$(database)/documents/access/$(request.auth.uid)).data; }
+  function member() { return request.auth != null && account().active == true && request.auth.token.sessionVersion == account().sessionVersion && request.auth.token.auth_time * 1000 >= account().validAfter.toMillis(); }
+  function admin() { return member() && request.auth.token.admin == true; }
+  function own(uid) { return member() && request.auth.uid == uid; }
+  function str(v,n,m) { return v is string && v.size() >= n && v.size() <= m; }
+  function keys(d,k) { return d.keys().hasAll(k) && d.keys().hasOnly(k); }
+  function image(v) { return v == null || (str(v,1,300000) && v.matches('data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+')); }
+  function validMember(d) { return keys(d,['nickname','avatar','createdAt']) && str(d.nickname,1,50) && image(d.avatar) && d.createdAt is timestamp; }
+  function validAccess(d) { return keys(d,['active','mustChangePassword','sessionVersion','validAfter','createdAt']) && d.active is bool && d.mustChangePassword is bool && d.sessionVersion is int && d.sessionVersion > 0 && d.validAfter is timestamp && d.createdAt is timestamp; }
+  function validDiary(d) { return d.keys().hasAll(['text','image','authorUid','createdAt','updatedAt']) && d.keys().hasOnly(['text','image','authorUid','createdAt','updatedAt','historical','sourcePath','migrationHash']) && str(d.text,0,5000) && image(d.image) && (d.text.size() > 0 || d.image != null) && (d.authorUid == null || str(d.authorUid,1,128)) && (d.createdAt is timestamp || d.createdAt == null) && d.updatedAt is timestamp; }
+  function optionAt(a,i) { return a.size() <= i || str(a[i],1,120); }
+  function validOptions(a) { return a is list && a.size() >= 2 && a.size() <= 12 && a.toSet().size() == a.size() && optionAt(a,0) && optionAt(a,1) && optionAt(a,2) && optionAt(a,3) && optionAt(a,4) && optionAt(a,5) && optionAt(a,6) && optionAt(a,7) && optionAt(a,8) && optionAt(a,9) && optionAt(a,10) && optionAt(a,11); }
+  function validPoll(d) { return keys(d,['question','options','closed','createdAt']) && str(d.question,1,200) && validOptions(d.options) && d.closed is bool && d.createdAt is timestamp; }
+  function validVote(d,p) { return keys(d,['option','createdAt']) && d.option is int && d.option >= 0 && d.option < p.options.size() && d.createdAt == request.time; }
+  function validEvent(d) { return keys(d,['title','description','location','date','createdBy','createdAt','updatedAt']) && str(d.title,1,120) && str(d.description,0,2000) && str(d.location,1,150) && d.date is timestamp && str(d.createdBy,1,128) && d.createdAt is timestamp && d.updatedAt == request.time; }
+  function validAttendance(d) { return keys(d,['response','updatedAt']) && d.response in ['yes','no','maybe'] && d.updatedAt == request.time; }
+  function validSegment(s) { return s is map && s.keys().hasOnly(["label","weight"]) && s.label is string && s.label.size() > 0 && s.label.size() <= 80 && s.weight is int && s.weight >= 1 && s.weight <= 10000; }
+  function validSegments(a) { return a is list && a.size() >= 2 && a.size() <= 12 && (a.size() <= 0 || validSegment(a[0])) && (a.size() <= 1 || validSegment(a[1])) && (a.size() <= 2 || validSegment(a[2])) && (a.size() <= 3 || validSegment(a[3])) && (a.size() <= 4 || validSegment(a[4])) && (a.size() <= 5 || validSegment(a[5])) && (a.size() <= 6 || validSegment(a[6])) && (a.size() <= 7 || validSegment(a[7])) && (a.size() <= 8 || validSegment(a[8])) && (a.size() <= 9 || validSegment(a[9])) && (a.size() <= 10 || validSegment(a[10])) && (a.size() <= 11 || validSegment(a[11])); }
+  function validWheel(d) { return keys(d,['segments','updatedAt']) && validSegments(d.segments) && d.updatedAt == request.time; }
+  function validSpin(d) { let c = get(/databases/$(database)/documents/wheel/config).data;
+   return keys(d,['authorUid','result','index','segments','createdAt','source']) && d.authorUid == request.auth.uid && d.index is int && d.index >= 0 && d.index < c.segments.size() && d.segments == c.segments && d.result == c.segments[d.index].label && d.source == 'browser' && d.createdAt == request.time; }
+  match /access/{uid} {
+   allow get: if own(uid) || admin();
+   // Password reminder is UX only, never an authorization grant.
+   allow update: if own(uid) && validAccess(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword','validAfter']) && request.resource.data.mustChangePassword == false && request.resource.data.validAfter == request.time && request.resource.data.validAfter >= resource.data.validAfter;
   }
+  match /members/{uid} { allow read: if member(); allow update: if own(uid) && validMember(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt; }
+  match /privateMembers/{uid} { allow get: if own(uid) || admin(); allow list: if admin(); }
+  match /diary/{postId} {
+   allow read: if member();
+   allow create: if member() && validDiary(request.resource.data) && keys(request.resource.data,['text','image','authorUid','createdAt','updatedAt']) && request.resource.data.authorUid == request.auth.uid && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+   allow update: if member() && (resource.data.authorUid == request.auth.uid || admin()) && validDiary(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text','image','updatedAt']) && request.resource.data.updatedAt == request.time;
+   allow delete: if member() && (resource.data.authorUid == request.auth.uid || admin());
+  }
+  match /polls/{pollId} {
+   allow read: if member();
+   allow create: if admin() && validPoll(request.resource.data) && request.resource.data.closed == false && request.resource.data.createdAt == request.time;
+   allow update: if admin() && validPoll(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['closed']) && request.resource.data.closed == true;
+   match /votes/{uid} {
+    allow read: if member() && exists(/databases/$(database)/documents/polls/$(pollId));
+    allow create: if own(uid) && get(/databases/$(database)/documents/polls/$(pollId)).data.closed == false && validVote(request.resource.data,get(/databases/$(database)/documents/polls/$(pollId)).data);
+   }
+  }
+  match /events/{eventId} {
+   allow read: if member();
+   allow create: if admin() && validEvent(request.resource.data) && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time;
+   allow update: if admin() && validEvent(request.resource.data) && request.resource.data.createdAt == resource.data.createdAt && request.resource.data.createdBy == resource.data.createdBy;
+   match /attendance/{uid} {
+    allow read: if member() && exists(/databases/$(database)/documents/events/$(eventId));
+    allow create, update: if own(uid) && validAttendance(request.resource.data) && get(/databases/$(database)/documents/events/$(eventId)).data.date > request.time;
+   }
+  }
+  match /wheel/{configId} { allow read: if member(); allow create,update: if admin() && configId == 'config' && validWheel(request.resource.data); }
+  match /wheelSpins/{spinId} { allow read: if member(); allow create: if member() && validSpin(request.resource.data); }
+  function validRanking(d) { return keys(d,['name','description','updatedAt']) && str(d.name,1,100) && str(d.description,0,1000) && d.updatedAt == request.time; }
+  function validScore(d) { return keys(d,['score']) && d.score is int && d.score >= -1000000 && d.score <= 1000000; }
+  match /rankings/{rankingId} {
+   allow read: if member();
+   allow create,update: if admin() && validRanking(request.resource.data);
+   match /entries/{uid} {
+    allow read: if member() && exists(/databases/$(database)/documents/rankings/$(rankingId));
+    allow create,update: if admin() && validScore(request.resource.data) && existsAfter(/databases/$(database)/documents/rankings/$(rankingId)) && exists(/databases/$(database)/documents/members/$(uid));
+    allow delete: if admin();
+   }
+  }
+  match /historical/{itemId} { allow read: if admin(); }
+  match /{document=**} { allow read, write: if false; }
+ }
 }
+

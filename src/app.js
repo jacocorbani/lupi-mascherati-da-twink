@@ -210,7 +210,9 @@ async function start(user) {
           return;
         }
         if (state) return;
-        const watchers = {};
+        const watchers = {}, voteWatchers = {}, scoreWatchers = {};
+        unsubs.push(() => Object.values(voteWatchers).forEach(stop => stop()));
+        unsubs.push(() => Object.values(scoreWatchers).forEach(stop => stop()));
         state = {
           uid: user.uid,
           admin: token.claims.admin === true,
@@ -222,10 +224,10 @@ async function start(user) {
           wheelSpins: [],
           rankings: [],
           pageSize: {},
-          loadMore: (name) => watch(name, state.pageSize[name] + 100),
+          loadMore: (name) => watch(name, state.pageSize[name] + 20),
         };
         shell();
-        function watch(name, size = 100) {
+        function watch(name, size = 20) {
           watchers[name]?.();
           state.pageSize[name] = size;
           let q = collection(db, name);
@@ -235,7 +237,35 @@ async function start(user) {
             q,
             (s) => {
               if (!state) return;
-              state[name] = s.docs.map((d) => ({ id: d.id, ...d.data() }));
+              const previous = state[name];
+              state[name] = s.docs.map((d) => ({ id: d.id, ...d.data(), ...(name === "polls" ? {counts:previous.find(p => p.id === d.id)?.counts || d.data().options.map(() => 0)} : {}) }));
+              if (name === "rankings") {
+                for (const key of Object.keys(scoreWatchers)) if (!state.rankings.some(r=>r.id===key)) { scoreWatchers[key](); delete scoreWatchers[key]; }
+                for (const ranking of state.rankings) {
+                  ranking.entries=previous.find(r=>r.id===ranking.id)?.entries || [];
+                  if (!scoreWatchers[ranking.id]) scoreWatchers[ranking.id]=onSnapshot(collection(db,"rankings",ranking.id,"entries"),entries=>{
+                    if(!state || current!==generation) return;
+                    const target=state.rankings.find(r=>r.id===ranking.id);
+                    if(!target) return;
+                    target.entries=entries.docs.map(e=>({uid:e.id,score:e.data().score}));
+                    if(!document.activeElement?.closest("form") && route !== "ruota") render(); else $(".refresh").hidden=false;
+                  },()=>toast("Punteggi non disponibili.",true));
+                }
+              }
+              if (name === "polls") {
+                for (const key of Object.keys(voteWatchers)) if (!state.polls.some(p => p.id === key)) { voteWatchers[key](); delete voteWatchers[key]; }
+                for (const poll of state.polls) if (!voteWatchers[poll.id]) {
+                  voteWatchers[poll.id] = onSnapshot(collection(db,"polls",poll.id,"votes"), votes => {
+                    if (!state || current !== generation) return;
+                    const target = state.polls.find(p => p.id === poll.id);
+                    if (!target) return;
+                    target.counts = target.options.map(() => 0);
+                    votes.forEach(v => { const index=v.data().option; if(Number.isInteger(index) && index>=0 && index<target.counts.length) target.counts[index]++; });
+                    if (!document.activeElement?.closest("form") && route !== "ruota") render();
+                    else $(".refresh").hidden = false;
+                  }, () => toast("Voti non disponibili. Riprova più tardi.",true));
+                }
+              }
               if (
                 document.activeElement?.closest("form") ||
                 (document.querySelector(".wheel-disc") && route === "ruota")

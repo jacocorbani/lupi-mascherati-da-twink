@@ -1,41 +1,30 @@
-# Verifiche effettivamente eseguite
+# Verifiche Spark — 14 novembre 2026
 
-Test completi: 16 ottobre 2026. Ricontrollo unitari (7/7) e build finale: 22 ottobre 2026. Ambiente Windows locale; Node 24.19.0, Firebase CLI 14.27.0, Java Temurin 21. Emulatori isolati `demo-combriccola`. Runtime Cloud Functions configurato Node 22. Anche la CI GitHub su Ubuntu/Node 22 ha superato tutte le suite e la build il 22 ottobre 2026 (run 39817131479). Il collaudo cloud resta necessario.
+La versione attuale usa soltanto Authentication e Firestore nel piano Spark. Le vecchie verifiche Functions/Storage rimangono nella cronologia Git e non descrivono il rilascio attuale.
 
-| Verifica                                | Risultato                                                                                               |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Build Vite                              | Superata; bundle JS finale 596,20 kB / 180,67 kB gzip (avviso dimensione >500 kB)                                  |
-| Test unitari e planner migrazione       | 7/7 superati                                                                                            |
-| Regole Firestore e Storage              | 11/11 superati, anche dopo aggiornamento lettura stato account admin                                    |
-| Integrazione Auth/Functions/Firestore   | 8/8 superati                                                                                            |
-| Importazione migrazione negli emulatori | 1/1 superato: immagini, autore ignoto, seconda esecuzione e conflitto                                   |
-| Backup reale                            | 96 documenti, hash SHA-256 verificato dopo rilettura                                                    |
-| Dry-run sul backup reale                | 109 scritture pianificate; 6 segnalazioni; 13 membri senza mapping verificato; nessuna scrittura remota |
-| Dashboard desktop                       | Verificata nel browser, screenshot 1440×1000                                                            |
-| Dashboard smartphone                    | Verificata a 390×844, screenshot; nessun overflow orizzontale del documento                             |
-| Navigazione mobile diario/sondaggi      | Verificata nel browser                                                                                  |
-| Login UI contro emulatori               | Account admin fittizio autenticato; menu amministrazione presente                                       |
-| XSS nella UI                            | Stringa `<img src=x onerror=alert(1)>` visualizzata come testo; nessun elemento img inserito            |
+| Controllo | Risultato locale |
+| --- | --- |
+| Unitari e planner | 7/7 |
+| Security Rules Spark | 13/13 |
+| Flussi Auth e Firestore reali negli emulatori | 5/5 |
+| Migrazione Spark e compressione | 1/1 |
+| Totale | 26/26 |
+| Build Vite | Superata; JS principale 579,04 kB / 174,46 kB gzip; chunk dati separato 4,09 kB |
+| Configurazione Authentication cloud | Email/password attivo, policy 12–128, signup/delete client disabilitati, protezione enumerazione e domini configurati |
+| Fatturazione | Nessun piano a pagamento attivato |
 
-## Casi di sicurezza coperti
+Ambiente locale: Windows, Node 24.19.0, Java 21, Firebase CLI 14.27.0. La CI usa Node 22. Esito della CI e verifiche del rilascio saranno registrati dopo la pubblicazione.
 
-Anonimi esclusi da dati e foto; nome reale leggibile solo dal proprietario e dagli admin; scritture dirette sempre negate, anche agli admin; modifica di ruoli, punteggi e voti da client negata; accesso negato a account disabilitati, sessioni obsolete, utenti temporanei e account non iscritti al gruppo; cancellazione altrui negata; vecchi percorsi negati; Storage limita proprietario, MIME, dimensione e sovrascrittura.
+## Casi coperti
+Anonimi, utenti non iscritti, disabilitati e token con versione obsoleta sono esclusi. Profilo pubblico separato dai dati privati. Client impossibilitati a creare account, modificare claim o accessi, falsificare proprietari, scrivere campi extra, superare limiti testo/foto, retrodatare post, votare per altri, cambiare o cancellare un voto e votare dopo la chiusura. Eventi, ruota e punteggi riservati agli admin; partecipazioni legate al chiamante.
 
-Le callable sono state testate attraverso HTTP negli emulatori: creazione account admin, primo accesso, verifica password attuale, cambio password, revoca token precedente, proprietà dei post dopo cambio nickname, voto singolo, indice non valido, sondaggio chiuso, partecipazione legata al chiamante, classifica riservata agli admin, estrazione server idempotente e disattivazione immediata.
+Integrazione: provisioning locale, password attuale errata rifiutata, cambio password, invalidazione sessione, cambio nickname senza perdita di proprietà, voto unico, eventi, classifiche, ruota con 12 spicchi e idempotenza, disattivazione/riattivazione e protezione dell'ultimo amministratore.
 
-## Problemi individuati e corretti
+Migrazione: compressione di un'immagine sintetica oltre limite conservando l'originale, autore storico non attribuito, interruzione simulata, ripresa senza duplicati e rilevazione di modifiche successive.
 
-- Il primo test Storage ha rilevato una sovrascrittura consentita: aggiunto `resource == null`, suite rieseguita con successo.
-- L'anteprima poteva essere rimpiazzata dal callback Auth: separata l'inizializzazione della fixture locale da quella della sessione reale.
-- La prima esecuzione dell'emulatore Functions attendeva il parametro API key: configurazione locale esplicita e avvio non interattivo.
-- Migrazione: i conflitti non vengono più saltati silenziosamente; sono verificati tramite hash e bloccano l'importazione.
+## Correzioni emerse
+La prima validazione della ruota a 12 spicchi superava il limite di espressioni delle regole; è stata semplificata e il caso massimo è ora coperto da test. I punteggi sono documenti separati per evitare validazioni di grandi array. Il test di revoca è stato isolato per usare esplicitamente la sessione del membro disattivato.
 
-## Non eseguito / da non considerare superato
+## Limiti
+Il promemoria di cambio password è UX, non un controllo server sul cambiamento della password. La ruota è locale e non certifica la casualità. Il progetto Spark ha quote finite e non dispone di un rate limit applicativo globale. Le Security Rules sono un prototipo verificato dagli scenari sopra, non una certificazione di assenza di vulnerabilità.
 
-Deploy Firebase o Pages, test cloud di App Check, test provider Auth in produzione, migrazione reale, associazione delle identità, prova su staging cloud separato, rollback in produzione, stress test, audit indipendente completo e collaudo esaustivo di ogni browser. Non è stato simulato un distacco di rete reale nel browser: è presente il controllo offline, ma quel caso richiede ancora collaudo manuale.
-
-Le nuove regole sono una proposta verificata negli emulatori e pronta per revisione; nessun insieme finito di test certifica l'assenza di ogni vulnerabilità. La loro applicazione deve essere coordinata con il nuovo frontend e i nuovi account.
-
-## Preparazione migrazione — 13 novembre 2026
-
-Nuovo backup: 99 documenti, SHA-256 verificato. Dry-run: 113 scritture, 6 segnalazioni. Test unitari 7/7 rieseguiti. Suite migrazione ampliata a 3/3: checkpoint/hash, ripresa dopo interruzione, verifica dei documenti e immagini, conflitti e idempotenza. I 2 nuovi test portano il totale implementato a 29; le altre suite non sono state rieseguite in questo passaggio. Nessun import o deploy reale eseguito: fatturazione e servizi cloud ancora da attivare.

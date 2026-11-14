@@ -76,6 +76,7 @@ export function form(fields, label, submit) {
   return node;
 }
 export const date = (value) => {
+  if (value === null || value === undefined || value === "") return "Data non disponibile";
   const d = value?.toDate ? value.toDate() : new Date(value);
   return Number.isNaN(+d)
     ? "Data non disponibile"

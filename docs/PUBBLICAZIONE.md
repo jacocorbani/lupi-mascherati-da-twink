@@ -1,26 +1,20 @@
-# Checklist di rilascio — approvazione richiesta
+# Rilascio gratuito Spark
+Il proprietario ha autorizzato migrazione, merge e pubblicazione, poi ha imposto il vincolo **tutto gratuito** e accettato la gestione locale degli account. Non collegare conti di fatturazione e non attivare Blaze.
 
-Il 13 novembre 2026 il proprietario ha autorizzato migrazione, merge e pubblicazione. L'autorizzazione non sostituisce i prerequisiti tecnici: completare servizi, staging, checkpoint e verifica degli accessi prima del passaggio. Stato attuale: fatturazione disattivata, nessun conto accessibile all'operatore, Auth non inizializzato, nessun bucket Storage. L'attivazione della fatturazione richiede il proprietario.
+## Sequenza di passaggio
+1. Verificare test, build e CI su Node 22; preparare la pubblicazione GitHub Pages tramite Actions.
+2. Verificare Authentication: email/password, iscrizioni autonome disabilitate, policy di almeno 12 caratteri, protezione enumerazione e dominio GitHub Pages.
+3. Conservare backup recente, SHA-256 e regole precedenti in `reports/private` / `backups`. Sono dati privati, esclusi dal repository.
+4. Nella finestra di passaggio distribuire solo regole e indici Firestore. Le regole chiudono i percorsi legacy: il vecchio frontend smette di accedere ai dati.
+5. Con le scritture legacy bloccate, rinnovare il backup e verificare numero documenti/hash. Eseguire dry-run Spark e impostare il checkpoint associato a quel backup.
+6. Creare l'admin tramite lo strumento locale. Importare con journal, senza cancellare o sovrascrivere gli originali. Rileggere e verificare i contenuti trasferiti.
+7. Pubblicare la build configurata su GitHub Pages; verificare accesso pubblico limitato alla pagina di login, accesso del membro, foto e privacy. Consegnare le credenziali iniziali tramite file locale privato.
+8. Conservare il commit di rilascio, journal e backup. Non ripristinare regole aperte come soluzione ordinaria a un errore.
 
-1. Rivedere commit, test e `docs/INVENTARIO.md`; verificare il piano Firebase e approvare eventuali costi di Cloud Functions e Storage. Non attivare automaticamente Blaze.
-2. Verificare backup dati e regole esistenti, conservare gli hash e una copia separata protetta. La sostituzione delle regole interrompe il vecchio client: pianificare una finestra di passaggio, senza distribuire prima le nuove regole sulla vecchia app.
-3. Creare e validare un ambiente Firebase di staging separato, con gli stessi provider e la stessa regione scelta per la produzione. I test locali non equivalgono a un collaudo cloud.
-4. Abilitare Email/Password, configurare la policy delle password (minimo 12 caratteri) e la protezione contro l'enumerazione degli account. Se il progetto supporta Identity Platform, disabilitare la creazione account dai client. Verificare con una richiesta diretta che l'API di registrazione rifiuti le nuove iscrizioni. Non basta l'assenza di un modulo di registrazione.
-5. Registrare il dominio GitHub Pages nei domini autorizzati Auth. Configurare App Check con reCAPTCHA Enterprise sul dominio previsto, inserire la site key pubblica e collaudare token validi, scaduti e assenti. Valutare l'enforcement anche su Firestore e Storage dopo il collaudo.
-6. Configurare il parametro backend `AUTH_WEB_API_KEY` con la chiave Web pubblica del progetto. Non lasciare `demo-key` in produzione. Gli emulatori usano `functions/.env.local` escluso da Git.
-7. Verificare esistenza e regione del bucket. Per lettura Blob dal browser configurare CORS esclusivamente per il dominio del sito e localhost nello staging. Le regole Storage usano Firestore `(default)`: concedere le autorizzazioni di servizio richieste al deploy.
-8. Configurare la build con le variabili `.env.example` per il progetto reale e `VITE_USE_EMULATORS=false`. Verificare che `VITE_APPCHECK_SITE_KEY` sia valorizzata.
-9. Dopo approvazione esplicita, distribuire Functions e regole selezionate con CLI e `--project lupimacheratidatwink`; rivedere l'eventuale richiesta di abilitazione API/IAM/costi. Non distribuire servizi estranei.
-10. Creare il primo admin da un ambiente fidato con credenziali operatore ADC, lo script `functions/bootstrap-admin.js` e `APPROVE_ADMIN_BOOTSTRAP` uguale al project ID. Non pubblicare endpoint di bootstrap; comunicare la password temporanea privatamente. Lo script non assegna ruoli ad account preesistenti e fallisce se lo username esiste.
-11. Conservare inizialmente i contenuti come storico senza associazioni personali implicite. Eseguire la prova in staging; seguire `docs/MIGRAZIONE.md` per l'importatore di produzione e il checkpoint. L'autorizzazione del proprietario è acquisita; restano necessari backup fresco, accessi funzionanti e ambiente protetto prima dell'importazione.
-12. Ottenere approvazione al merge. Pubblicare l'output `dist/` tramite un workflow Pages manuale o il processo approvato; non servire i sorgenti Vite direttamente dalla radice del repository. Aggiornare la configurazione Pages solo con approvazione.
-13. Collaudare login, password, account disabilitato, foto private, sondaggio concorrente, eventi, ruota e gestione mobile sul dominio finale. Conservare il piano di ripristino.
+## Prerequisiti verificati
+Authentication email/password inizializzato il 13 novembre 2026. Configurati via API: blocco signup/delete client, policy 12–128 caratteri, protezione enumerazione, dominio `jacocorbani.github.io`.
+Nessun bucket Storage e fatturazione disattivata nell'ultima lettura. La versione Spark non usa App Check/Functions/Storage. La protezione dei dati dipende da Authentication e Security Rules.
 
-## Limiti da chiudere prima del rilascio
+## Limiti espliciti
+Le regole sono state testate negli emulatori, ma richiedono revisione prima di un uso più ampio. Non esiste un limite globale antispam applicativo: un membro può consumare le quote gratuite; in quel caso disabilitarlo dallo strumento locale. Le classifiche vengono salvate voce per voce: un'interruzione può lasciare un aggiornamento parziale, ripetibile dalla UI. La casualità della ruota e il promemoria di cambio password non sono verificati da un server applicativo.
 
-- Auth e App Check devono essere collaudati su un progetto cloud reale di staging.
-- L'interfaccia carica inizialmente le ultime 100 voci per diario, sondaggi ed estrazioni; «Carica contenuti precedenti» amplia progressivamente la finestra. Verificare costi e prestazioni prima di archivi molto grandi.
-- Le foto rimosse dal diario non vengono eliminate automaticamente da Storage: serve una procedura di pulizia degli oggetti orfani, con controllo dei riferimenti, prima di crescita significativa del volume.
-- Il tipo MIME è controllato, ma non viene eseguita una transcodifica server delle immagini. Valutare la normalizzazione prima di un utilizzo più ampio.
-- In caso di guasto tra Auth e Firestore, provisioning e reset falliscono mantenendo l'accesso chiuso; il recupero richiede un operatore fidato.
-- Sono necessari controlli sull'ultimo amministratore prima di consentire la gestione ordinaria di più amministratori. L'interfaccia impedisce l'autodisattivazione, ma non gestisce quorum amministrativi.
