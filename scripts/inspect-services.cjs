@@ -32,8 +32,8 @@ const { Client } = cli("./lib/apiv2");
       results[name] =
         name === "auth"
           ? {
-              signIn: b.signIn,
-              client: b.client,
+              signIn: { email: b.signIn?.email },
+              client: { permissions: b.client?.permissions },
               authorizedDomains: b.authorizedDomains,
               passwordPolicyConfig: b.passwordPolicyConfig,
             }

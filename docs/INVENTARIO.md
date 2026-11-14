@@ -1,5 +1,7 @@
 # Inventario verificato — 16 ottobre 2026
 
+Questa sezione descrive la ricognizione iniziale. Il rilascio Spark del 14 novembre 2026 è documentato in `VERIFICHE.md`: Authentication ora attivo, regole protette distribuite, backup definitivo di 99 documenti e migrazione completata.
+
 ## Codice originale
 
 Repository `jacocorbani/lupi-mascherati-da-twink`, branch `main`, commit `79159f2b00b31ef8992f8c3a9a096d874c649343`. Un solo file `index.html` di 42.916 byte. Bundle Git locale creato e verificato con `git bundle verify`; non pubblicato perché contiene anche la vecchia credenziale incorporata nella cronologia.
@@ -44,6 +46,6 @@ Il diario non registra UID né ID locale dell'autore: l'identità non può esser
 
 ## Nuovo modello
 
-`members/{uid}`: nickname, avatar Storage, data creazione; `privateMembers/{uid}`: username, nome reale, data creazione; `access/{uid}`: active, mustChangePassword, sessionVersion. Le Custom Claims contengono admin e sessionVersion.
+`members/{uid}`: nickname, avatar compresso come Data URL, data creazione; `privateMembers/{uid}`: username, nome reale, data creazione; `access/{uid}`: active, mustChangePassword, sessionVersion, validAfter e createdAt. Le Custom Claims contengono admin e sessionVersion. Account gestiti tramite strumento locale.
 
-Collezioni funzionali: `diary`, `polls` con `votes/{uid}`, `events` con `attendance/{uid}`, `wheel/config`, `wheelSpins`, `rankings`. Operazioni privilegiate registrate in `audit`; rate limit server in `limits`; archivio della migrazione in `historical`, riservato agli amministratori. Tutti i percorsi legacy sono negati dalle nuove regole: serve un passaggio coordinato dal vecchio frontend.
+Collezioni funzionali: `diary`, `polls` con `votes/{uid}`, `events` con `attendance/{uid}`, `wheel/config`, `wheelSpins`, `rankings` con `entries/{uid}`. Archivio della migrazione in `historical`, riservato agli amministratori. Tutti i percorsi legacy sono negati dalle nuove regole. La versione Spark non usa Functions, Storage, audit server o rate limit applicativo globale.

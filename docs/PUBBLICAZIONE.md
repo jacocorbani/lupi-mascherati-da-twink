@@ -1,4 +1,5 @@
 # Rilascio gratuito Spark
+Rilascio completato il 14 novembre 2026. Sito: https://jacocorbani.github.io/lupi-mascherati-da-twink/ . Esiti e identificativi in `VERIFICHE.md`. La sequenza seguente documenta la procedura eseguita e va adattata con un nuovo backup prima di futuri interventi.
 Il proprietario ha autorizzato migrazione, merge e pubblicazione, poi ha imposto il vincolo **tutto gratuito** e accettato la gestione locale degli account. Non collegare conti di fatturazione e non attivare Blaze.
 
 ## Sequenza di passaggio
